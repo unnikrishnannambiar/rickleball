@@ -41,6 +41,7 @@
             background: transparent;
             display: block;
             border-radius: 30px;
+            touch-action: none; /* Prevent default touch actions */
         }
         #controls {
             margin-top: 10px;
@@ -255,9 +256,33 @@
         const pauseButton = document.getElementById("pauseButton");
         const restartButton = document.getElementById("restartButton");
 
+        // Sliders
+        const speedDeltaSlider = document.getElementById("speedDeltaSlider");
+        const speedDeltaValue = document.getElementById("speedDeltaValue");
+
+        const initialSpeedSlider = document.getElementById("initialSpeedSlider");
+        const initialSpeedValue = document.getElementById("initialSpeedValue");
+
         // Keyboard controls
         const keys = {};
 
+        // Touch controls
+        const touchControls = {
+            paddle1: {
+                active: false,
+                touchId: null,
+                startY: 0,
+                paddleStartY: 0
+            },
+            paddle2: {
+                active: false,
+                touchId: null,
+                startY: 0,
+                paddleStartY: 0
+            }
+        };
+
+        // Event listeners for keyboard
         document.addEventListener("keydown", function(e) {
             keys[e.key] = true;
             // Prevent default behavior for spacebar to avoid scrolling when paused
@@ -270,18 +295,11 @@
             keys[e.key] = false;
         });
 
-        // Speed Delta Slider
-        const speedDeltaSlider = document.getElementById("speedDeltaSlider");
-        const speedDeltaValue = document.getElementById("speedDeltaValue");
-
+        // Event listeners for sliders
         speedDeltaSlider.addEventListener("input", function() {
             speedDelta = parseFloat(speedDeltaSlider.value);
             speedDeltaValue.textContent = speedDelta.toFixed(1);
         });
-
-        // Initial Speed Slider
-        const initialSpeedSlider = document.getElementById("initialSpeedSlider");
-        const initialSpeedValue = document.getElementById("initialSpeedValue");
 
         initialSpeedSlider.addEventListener("input", function() {
             initialSpeed = parseFloat(initialSpeedSlider.value);
@@ -415,6 +433,17 @@
             player2Name = "";
             player1Entered = false;
             player2Entered = false;
+
+            // Reset touch controls
+            touchControls.paddle1.active = false;
+            touchControls.paddle1.touchId = null;
+            touchControls.paddle1.startY = 0;
+            touchControls.paddle1.paddleStartY = 0;
+
+            touchControls.paddle2.active = false;
+            touchControls.paddle2.touchId = null;
+            touchControls.paddle2.startY = 0;
+            touchControls.paddle2.paddleStartY = 0;
         }
 
         // Game loop functions
@@ -513,6 +542,7 @@
             }
 
             isPaused = true;
+            countdownMessage.textContent = "Resetting...";
             setTimeout(function() {
                 isPaused = false;
                 ball.x = canvas.width / 2;
@@ -674,6 +704,106 @@
 
         // Start the game loop
         gameLoop();
+
+        // Touch event handlers
+        canvas.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            const touches = e.changedTouches;
+
+            for (let i = 0; i < touches.length; i++) {
+                const touch = touches[i];
+                const touchX = touch.clientX - canvas.getBoundingClientRect().left;
+                const touchY = touch.clientY - canvas.getBoundingClientRect().top;
+
+                // Check if touch is on paddle1
+                if (touchX >= paddle1.x && touchX <= paddle1.x + paddle1.width &&
+                    touchY >= paddle1.y && touchY <= paddle1.y + paddle1.height) {
+                    touchControls.paddle1.active = true;
+                    touchControls.paddle1.touchId = touch.identifier;
+                    touchControls.paddle1.startY = touchY;
+                    touchControls.paddle1.paddleStartY = paddle1.y;
+                }
+
+                // Check if touch is on paddle2
+                if (touchX >= paddle2.x && touchX <= paddle2.x + paddle2.width &&
+                    touchY >= paddle2.y && touchY <= paddle2.y + paddle2.height) {
+                    touchControls.paddle2.active = true;
+                    touchControls.paddle2.touchId = touch.identifier;
+                    touchControls.paddle2.startY = touchY;
+                    touchControls.paddle2.paddleStartY = paddle2.y;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("touchmove", function(e) {
+            e.preventDefault();
+            const touches = e.changedTouches;
+
+            for (let i = 0; i < touches.length; i++) {
+                const touch = touches[i];
+                const touchY = touch.clientY - canvas.getBoundingClientRect().top;
+
+                // Move paddle1 if active
+                if (touchControls.paddle1.active && touch.identifier === touchControls.paddle1.touchId) {
+                    const deltaY = touchY - touchControls.paddle1.startY;
+                    let newY = touchControls.paddle1.paddleStartY + deltaY;
+                    // Clamp the paddle position within the canvas
+                    newY = Math.max(Math.min(newY, canvas.height - paddle1.height), 0);
+                    paddle1.y = newY;
+                }
+
+                // Move paddle2 if active
+                if (touchControls.paddle2.active && touch.identifier === touchControls.paddle2.touchId) {
+                    const deltaY = touchY - touchControls.paddle2.startY;
+                    let newY = touchControls.paddle2.paddleStartY + deltaY;
+                    // Clamp the paddle position within the canvas
+                    newY = Math.max(Math.min(newY, canvas.height - paddle2.height), 0);
+                    paddle2.y = newY;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("touchend", function(e) {
+            e.preventDefault();
+            const touches = e.changedTouches;
+
+            for (let i = 0; i < touches.length; i++) {
+                const touch = touches[i];
+
+                // Deactivate paddle1 if touch ends
+                if (touch.identifier === touchControls.paddle1.touchId) {
+                    touchControls.paddle1.active = false;
+                    touchControls.paddle1.touchId = null;
+                }
+
+                // Deactivate paddle2 if touch ends
+                if (touch.identifier === touchControls.paddle2.touchId) {
+                    touchControls.paddle2.active = false;
+                    touchControls.paddle2.touchId = null;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener("touchcancel", function(e) {
+            e.preventDefault();
+            const touches = e.changedTouches;
+
+            for (let i = 0; i < touches.length; i++) {
+                const touch = touches[i];
+
+                // Deactivate paddle1 if touch is canceled
+                if (touch.identifier === touchControls.paddle1.touchId) {
+                    touchControls.paddle1.active = false;
+                    touchControls.paddle1.touchId = null;
+                }
+
+                // Deactivate paddle2 if touch is canceled
+                if (touch.identifier === touchControls.paddle2.touchId) {
+                    touchControls.paddle2.active = false;
+                    touchControls.paddle2.touchId = null;
+                }
+            }
+        }, { passive: false });
     </script>
 </body>
 </html>
