@@ -51,7 +51,13 @@
             flex-wrap: wrap;
             width: 100%;
         }
-        #speedDeltaSlider {
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        #speedDeltaSlider, #initialSpeedSlider {
             width: 200px;
             -webkit-appearance: none;
             appearance: none;
@@ -64,7 +70,7 @@
             box-shadow: inset 7px 7px 14px #c1c1c1,
                         inset -7px -7px 14px #ffffff;
         }
-        #speedDeltaSlider::-webkit-slider-thumb {
+        #speedDeltaSlider::-webkit-slider-thumb, #initialSpeedSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 25px;
@@ -75,10 +81,12 @@
                         7px 7px 14px #c1c1c1;
             cursor: pointer;
         }
-        #speedDeltaValue {
+        #speedDeltaValue, #initialSpeedValue {
             font-size: 18px;
             color: #333333;
             font-family: 'Times New Roman', Times, serif;
+            width: 40px;
+            text-align: center;
         }
         canvas {
             padding: 0;
@@ -160,10 +168,16 @@
         <canvas id="gameCanvas" width="800" height="500"></canvas>
     </div>
     <div id="controls">
-        <p style="font-family: 'Times New Roman', Times, serif;">
-            Speed Delta: <input type="range" id="speedDeltaSlider" min="0" max="5" step="0.1" value="1">
+        <div class="slider-container">
+            <label for="initialSpeedSlider">Initial Speed:</label>
+            <input type="range" id="initialSpeedSlider" min="5" max="15" step="0.5" value="7">
+            <span id="initialSpeedValue">7.0</span>
+        </div>
+        <div class="slider-container">
+            <label for="speedDeltaSlider">Speed Delta:</label>
+            <input type="range" id="speedDeltaSlider" min="0.5" max="3" step="0.1" value="1">
             <span id="speedDeltaValue">1.0</span>
-        </p>
+        </div>
         <button id="pauseButton" class="control-button">Pause</button>
         <button id="restartButton" class="control-button">Restart</button>
     </div>
@@ -172,104 +186,115 @@
     <div id="winnerMessage"></div>
     <script>
         // Canvas setup
-        var canvas = document.getElementById("gameCanvas");
-        var ctx = canvas.getContext("2d");
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
         // Game variables
-        var paddleWidth = 10;
-        var paddleHeight = 100;
-        var ballRadius = 10;
+        const paddleWidth = 10;
+        const paddleHeight = 100;
+        const ballRadius = 10;
 
         // Paddles
-        var paddle1 = {
+        const paddle1 = {
             x: 30,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
             dy: 0,
-            speed: 5
+            speed: 8, // Increased from 5 to 8
+            color: "#2a2a2a" // Darker gray
         };
 
-        var paddle2 = {
+        const paddle2 = {
             x: canvas.width - paddleWidth - 30,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
             dy: 0,
-            speed: 5
+            speed: 8, // Increased from 5 to 8
+            color: "#2a2a2a" // Darker gray
         };
 
         // Ball
-        var ball = {
+        const ball = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             radius: ballRadius,
-            speed: 5, // Increased starting speed from 3 to 5
-            dx: 5 * (Math.random() > 0.5 ? 1 : -1), // Adjusted to match new speed
-            dy: 5 * (Math.random() > 0.5 ? 1 : -1), // Adjusted to match new speed
+            speed: 7, // Will be set based on initial speed slider
+            dx: 7 * (Math.random() > 0.5 ? 1 : -1), // Will be set based on initial speed slider
+            dy: 7 * (Math.random() > 0.5 ? 1 : -1), // Will be set based on initial speed slider
             color: "#808080" // Grey color at start
         };
 
         // Scores and total points
-        var score1 = 0;
-        var score2 = 0;
-        var totalPoints = 0;
+        let score1 = 0;
+        let score2 = 0;
+        let totalPoints = 0;
 
         // Speed delta
-        var speedDelta = 1.0;
+        let speedDelta = 1.0;
 
         // Game state
-        var isPaused = false;
-        var isGameOver = false;
-        var isGameStarted = false;
-        var countdown = 3;
+        let isPaused = false;
+        let isGameOver = false;
+        let isGameStarted = false;
+        let countdown = 3;
 
         // Player names
-        var player1NameInput = document.getElementById("player1Name");
-        var player2NameInput = document.getElementById("player2Name");
-        var player1Name = "";
-        var player2Name = "";
+        const player1NameInput = document.getElementById("player1Name");
+        const player2NameInput = document.getElementById("player2Name");
+        let player1Name = "";
+        let player2Name = "";
 
         // Messages
-        var winnerMessage = document.getElementById("winnerMessage");
-        var startMessage = document.getElementById("startMessage");
-        var countdownMessage = document.getElementById("countdownMessage");
+        const winnerMessage = document.getElementById("winnerMessage");
+        const startMessage = document.getElementById("startMessage");
+        const countdownMessage = document.getElementById("countdownMessage");
 
         // Control buttons
-        var pauseButton = document.getElementById("pauseButton");
-        var restartButton = document.getElementById("restartButton");
+        const pauseButton = document.getElementById("pauseButton");
+        const restartButton = document.getElementById("restartButton");
 
         // Keyboard controls
-        var keys = {};
+        const keys = {};
 
         document.addEventListener("keydown", function(e) {
-            keys[e.keyCode] = true;
+            keys[e.key] = true;
             // Prevent default behavior for spacebar to avoid scrolling when paused
-            if (e.keyCode === 32 && isPaused) {
+            if (e.key === ' ' && isPaused) {
                 e.preventDefault();
             }
         });
 
         document.addEventListener("keyup", function(e) {
-            delete keys[e.keyCode];
+            keys[e.key] = false;
         });
 
         // Speed Delta Slider
-        var speedDeltaSlider = document.getElementById("speedDeltaSlider");
-        var speedDeltaValue = document.getElementById("speedDeltaValue");
+        const speedDeltaSlider = document.getElementById("speedDeltaSlider");
+        const speedDeltaValue = document.getElementById("speedDeltaValue");
 
         speedDeltaSlider.addEventListener("input", function() {
             speedDelta = parseFloat(speedDeltaSlider.value);
             speedDeltaValue.textContent = speedDelta.toFixed(1);
         });
 
+        // Initial Speed Slider
+        const initialSpeedSlider = document.getElementById("initialSpeedSlider");
+        const initialSpeedValue = document.getElementById("initialSpeedValue");
+
+        initialSpeedSlider.addEventListener("input", function() {
+            initialSpeed = parseFloat(initialSpeedSlider.value);
+            initialSpeedValue.textContent = initialSpeed.toFixed(1);
+        });
+
         // Variables to track if players have pressed Enter
-        var player1Entered = false;
-        var player2Entered = false;
+        let player1Entered = false;
+        let player2Entered = false;
 
         // Event listeners for Enter key on name inputs
         player1NameInput.addEventListener("keydown", function(e) {
-            if (e.keyCode === 13) { // Enter key
+            if (e.key === 'Enter') { // Enter key
                 player1Name = player1NameInput.value.trim();
                 player1Entered = true;
                 checkNamesEntered();
@@ -277,7 +302,7 @@
         });
 
         player2NameInput.addEventListener("keydown", function(e) {
-            if (e.keyCode === 13) { // Enter key
+            if (e.key === 'Enter') { // Enter key
                 player2Name = player2NameInput.value.trim();
                 player2Entered = true;
                 checkNamesEntered();
@@ -297,6 +322,9 @@
 
                     startMessage.textContent = ""; // Remove start message
 
+                    // Set initial speed based on slider
+                    setInitialBallSpeed();
+
                     // Start countdown
                     startCountdown();
                 } else {
@@ -308,10 +336,19 @@
             }
         }
 
+        function setInitialBallSpeed() {
+            // Retrieve the initial speed from the slider
+            let initialSpeed = parseFloat(initialSpeedSlider.value);
+            ball.speed = initialSpeed;
+            // Set dx and dy based on initial speed and random direction
+            ball.dx = initialSpeed * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = initialSpeed * (Math.random() > 0.5 ? 1 : -1);
+        }
+
         function startCountdown() {
             countdown = 3;
             countdownMessage.textContent = countdown;
-            var countdownInterval = setInterval(function() {
+            const countdownInterval = setInterval(function() {
                 countdown--;
                 if (countdown > 0) {
                     countdownMessage.textContent = countdown;
@@ -346,16 +383,14 @@
             // Reset ball position and speed
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.speed = 5; // Reset to increased speed
-            ball.dx = 5 * (Math.random() > 0.5 ? 1 : -1); // Adjusted to match new speed
-            ball.dy = 5 * (Math.random() > 0.5 ? 1 : -1); // Adjusted to match new speed
+            setInitialBallSpeed();
             ball.color = "#808080"; // Grey color at start
 
             // Reset paddles
             paddle1.y = canvas.height / 2 - paddleHeight / 2;
             paddle2.y = canvas.height / 2 - paddleHeight / 2;
-            paddle1.speed = 5;
-            paddle2.speed = 5;
+            paddle1.speed = 8; // Reset to increased speed
+            paddle2.speed = 8; // Reset to increased speed
 
             // Reset game state
             isPaused = false;
@@ -385,18 +420,18 @@
         // Game loop functions
         function movePaddles() {
             // Player 1 controls (W and S keys)
-            if (keys[87]) { // W key
+            if (keys['w'] || keys['W']) { // W key
                 paddle1.dy = -paddle1.speed;
-            } else if (keys[83]) { // S key
+            } else if (keys['s'] || keys['S']) { // S key
                 paddle1.dy = paddle1.speed;
             } else {
                 paddle1.dy = 0;
             }
 
             // Player 2 controls (Up and Down arrow keys)
-            if (keys[38]) { // Up arrow
+            if (keys['ArrowUp']) { // Up arrow
                 paddle2.dy = -paddle2.speed;
-            } else if (keys[40]) { // Down arrow
+            } else if (keys['ArrowDown']) { // Down arrow
                 paddle2.dy = paddle2.speed;
             } else {
                 paddle2.dy = 0;
@@ -424,47 +459,9 @@
                 ball.dy = -ball.dy;
             }
 
-            // Paddle collision
-            // Paddle 1
-            if (ball.x - ball.radius < paddle1.x + paddle1.width &&
-                ball.y > paddle1.y &&
-                ball.y < paddle1.y + paddle1.height) {
-
-                // Calculate where the ball hit the paddle
-                var collidePoint = ball.y - (paddle1.y + paddle1.height / 2);
-
-                // Normalize the value of collidePoint (-1 to 1)
-                collidePoint = collidePoint / (paddle1.height / 2);
-
-                // Calculate angle in radians (max 45 degrees)
-                var angleRad = collidePoint * (Math.PI / 4);
-
-                // Direction of the ball after hitting
-                var direction = 1;
-
-                // Change the ball's speed and direction
-                var speed = ball.speed;
-                ball.dx = direction * speed * Math.cos(angleRad);
-                ball.dy = speed * Math.sin(angleRad);
-
-                ball.color = "#353535"; // Dark gray when hit
-            }
-
-            // Paddle 2
-            if (ball.x + ball.radius > paddle2.x &&
-                ball.y > paddle2.y &&
-                ball.y < paddle2.y + paddle2.height) {
-
-                var collidePoint = ball.y - (paddle2.y + paddle2.height / 2);
-                collidePoint = collidePoint / (paddle2.height / 2);
-                var angleRad = collidePoint * (Math.PI / 4);
-                var direction = -1;
-                var speed = ball.speed;
-                ball.dx = direction * speed * Math.cos(angleRad);
-                ball.dy = speed * Math.sin(angleRad);
-
-                ball.color = "#353535"; // Dark gray when hit
-            }
+            // Paddle collisions
+            checkPaddleCollision(paddle1, 1);
+            checkPaddleCollision(paddle2, 2);
 
             // Scoring
             if (ball.x - ball.radius < 0) {
@@ -477,6 +474,33 @@
                 totalPoints++;
                 ball.color = "#303030"; // Darkest gray when missed
                 resetBall();
+            }
+        }
+
+        function checkPaddleCollision(paddle, playerNumber) {
+            if ((playerNumber === 1 && ball.x - ball.radius < paddle.x + paddle.width) ||
+                (playerNumber === 2 && ball.x + ball.radius > paddle.x)) {
+                
+                if (ball.y > paddle.y && ball.y < paddle.y + paddle.height) {
+                    // Calculate where the ball hit the paddle
+                    let collidePoint = ball.y - (paddle.y + paddle.height / 2);
+
+                    // Normalize the value of collidePoint (-1 to 1)
+                    collidePoint = collidePoint / (paddle.height / 2);
+
+                    // Calculate angle in radians (max 60 degrees for more sensitivity)
+                    let angleRad = collidePoint * (Math.PI / 3);
+
+                    // Direction of the ball after hitting
+                    let direction = playerNumber === 1 ? 1 : -1;
+
+                    // Change the ball's speed and direction
+                    let speed = ball.speed;
+                    ball.dx = direction * speed * Math.cos(angleRad);
+                    ball.dy = speed * Math.sin(angleRad);
+
+                    ball.color = "#353535"; // Dark gray when hit
+                }
             }
         }
 
@@ -495,8 +519,8 @@
                 ball.x = canvas.width / 2;
                 ball.y = canvas.height / 2;
                 // Reverse direction
-                ball.dx = -ball.dx / Math.abs(ball.dx) * ball.speed * Math.cos(Math.PI / 4);
-                ball.dy = ball.speed * Math.sin(Math.PI / 4) * (Math.random() > 0.5 ? 1 : -1);
+                ball.dx = -Math.sign(ball.dx) * ball.speed * Math.cos(Math.PI / 3);
+                ball.dy = ball.speed * Math.sin(Math.PI / 3) * (Math.random() > 0.5 ? 1 : -1);
                 ball.color = "#808080"; // Reset to grey color
 
                 // Check if speed needs to increase
@@ -509,14 +533,14 @@
         }
 
         function increaseSpeed() {
-            var delta = speedDelta;
+            const delta = speedDelta;
 
             // Increase ball speed
             ball.speed += delta;
             // Adjust ball direction speeds accordingly
-            var speed = ball.speed;
-            var angleRad = Math.atan2(ball.dy, ball.dx);
-            ball.dx = (ball.dx / Math.abs(ball.dx)) * speed * Math.cos(angleRad);
+            const speed = ball.speed;
+            const angleRad = Math.atan2(ball.dy, ball.dx);
+            ball.dx = Math.sign(ball.dx) * speed * Math.cos(angleRad);
             ball.dy = speed * Math.sin(angleRad);
 
             // Increase paddle speeds
@@ -525,9 +549,8 @@
         }
 
         function drawPaddles() {
-            ctx.fillStyle = "#e5e5e5";
-            drawNeomorphicRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height);
-            drawNeomorphicRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height);
+            drawNeomorphicRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height, paddle1.color);
+            drawNeomorphicRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height, paddle2.color);
         }
 
         function drawBall() {
@@ -558,10 +581,10 @@
             ctx.fillText(player2Name || "Player 2", 3 * canvas.width / 4, 80);
         }
 
-        function drawNeomorphicRect(x, y, width, height) {
+        function drawNeomorphicRect(x, y, width, height, color) {
             // Draw rectangle with neomorphic effect
-            var radius = 15;
-            ctx.fillStyle = "#e5e5e5";
+            const radius = 15;
+            ctx.fillStyle = color;
             ctx.beginPath();
             ctx.moveTo(x + radius, y);
             ctx.lineTo(x + width - radius, y);
@@ -579,13 +602,13 @@
             ctx.shadowColor = "#ffffff";
             ctx.shadowOffsetX = -7;
             ctx.shadowOffsetY = -7;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 10; // Reduced for performance
             ctx.fill();
 
             ctx.shadowColor = "#c1c1c1";
             ctx.shadowOffsetX = 7;
             ctx.shadowOffsetY = 7;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 10; // Reduced for performance
             ctx.fill();
 
             // Reset shadow
@@ -603,13 +626,13 @@
             ctx.shadowColor = "#ffffff";
             ctx.shadowOffsetX = -7;
             ctx.shadowOffsetY = -7;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 10; // Reduced for performance
             ctx.fill();
 
             ctx.shadowColor = "#c1c1c1";
             ctx.shadowOffsetX = 7;
             ctx.shadowOffsetY = 7;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 10; // Reduced for performance
             ctx.fill();
 
             // Reset shadow
