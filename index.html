@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rickle Ball</title>
+    <style>
+        body {
+            background-color: #ebeaea;
+            color: #333333;
+            font-family: 'Times New Roman', Times, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            margin: 20px 0;
+            color: #333333;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background-color: #ebeaea;
+            border-radius: 30px;
+            padding: 10px;
+            box-sizing: border-box;
+            /* Enhanced border shadings for more contrast */
+            box-shadow: 30px 30px 60px #c1c1c1,
+                        -30px -30px 60px #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #gameCanvas {
+            background: transparent;
+            display: block;
+            border-radius: 30px;
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        #speedDeltaSlider {
+            width: 200px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 10px;
+            background: #ebeaea;
+            outline: none;
+            border-radius: 10px;
+            padding: 0;
+            box-sizing: border-box;
+            box-shadow: inset 7px 7px 14px #c1c1c1,
+                        inset -7px -7px 14px #ffffff;
+        }
+        #speedDeltaSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            background: #ebeaea;
+            border-radius: 50%;
+            box-shadow: -7px -7px 14px #ffffff,
+                        7px 7px 14px #c1c1c1;
+            cursor: pointer;
+        }
+        #speedDeltaValue {
+            font-size: 18px;
+            color: #333333;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        canvas {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        /* Styles for player name inputs */
+        #playerNames {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .player-input {
+            background-color: #000;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            width: 200px;
+            font-size: 16px;
+            font-family: 'Times New Roman', Times, serif;
+            box-sizing: border-box;
+        }
+        .player-input:disabled {
+            background-color: #333333;
+            cursor: default;
+        }
+        #winnerMessage {
+            font-size: 32px;
+            color: #333333;
+            margin-top: 20px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        #startMessage {
+            font-size: 24px;
+            color: #333333;
+            margin-top: 20px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        /* Countdown message style */
+        #countdownMessage {
+            font-size: 48px;
+            color: #333333;
+            margin-top: 20px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        /* Styles for Pause and Restart buttons */
+        .control-button {
+            background-color: #000;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: 'Times New Roman', Times, serif;
+            box-shadow: 7px 7px 14px #c1c1c1,
+                        -7px -7px 14px #ffffff;
+            transition: all 0.3s ease;
+        }
+        .control-button:hover {
+            box-shadow: inset 7px 7px 14px #c1c1c1,
+                        inset -7px -7px 14px #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rickle Ball</h1>
+    <div id="playerNames">
+        <input type="text" id="player1Name" class="player-input" placeholder="Player 1 Name">
+        <input type="text" id="player2Name" class="player-input" placeholder="Player 2 Name">
+    </div>
+    <p style="font-family: 'Times New Roman', Times, serif;">Player 1: W (Up), S (Down) &nbsp; | &nbsp; Player 2: Up Arrow (Up), Down Arrow (Down)</p>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
+    <div id="controls">
+        <p style="font-family: 'Times New Roman', Times, serif;">
+            Speed Delta: <input type="range" id="speedDeltaSlider" min="0" max="5" step="0.1" value="1">
+            <span id="speedDeltaValue">1.0</span>
+        </p>
+        <button id="pauseButton" class="control-button">Pause</button>
+        <button id="restartButton" class="control-button">Restart</button>
+    </div>
+    <div id="startMessage">Please enter both player names and press Enter.</div>
+    <div id="countdownMessage"></div>
+    <div id="winnerMessage"></div>
+    <script>
+        // Canvas setup
+        var canvas = document.getElementById("gameCanvas");
+        var ctx = canvas.getContext("2d");
+
+        // Game variables
+        var paddleWidth = 10;
+        var paddleHeight = 100;
+        var ballRadius = 10;
+
+        // Paddles
+        var paddle1 = {
+            x: 30,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            dy: 0,
+            speed: 5
+        };
+
+        var paddle2 = {
+            x: canvas.width - paddleWidth - 30,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            dy: 0,
+            speed: 5
+        };
+
+        // Ball
+        var ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: ballRadius,
+            speed: 5, // Increased starting speed from 3 to 5
+            dx: 5 * (Math.random() > 0.5 ? 1 : -1), // Adjusted to match new speed
+            dy: 5 * (Math.random() > 0.5 ? 1 : -1), // Adjusted to match new speed
+            color: "#808080" // Grey color at start
+        };
+
+        // Scores and total points
+        var score1 = 0;
+        var score2 = 0;
+        var totalPoints = 0;
+
+        // Speed delta
+        var speedDelta = 1.0;
+
+        // Game state
+        var isPaused = false;
+        var isGameOver = false;
+        var isGameStarted = false;
+        var countdown = 3;
+
+        // Player names
+        var player1NameInput = document.getElementById("player1Name");
+        var player2NameInput = document.getElementById("player2Name");
+        var player1Name = "";
+        var player2Name = "";
+
+        // Messages
+        var winnerMessage = document.getElementById("winnerMessage");
+        var startMessage = document.getElementById("startMessage");
+        var countdownMessage = document.getElementById("countdownMessage");
+
+        // Control buttons
+        var pauseButton = document.getElementById("pauseButton");
+        var restartButton = document.getElementById("restartButton");
+
+        // Keyboard controls
+        var keys = {};
+
+        document.addEventListener("keydown", function(e) {
+            keys[e.keyCode] = true;
+            // Prevent default behavior for spacebar to avoid scrolling when paused
+            if (e.keyCode === 32 && isPaused) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener("keyup", function(e) {
+            delete keys[e.keyCode];
+        });
+
+        // Speed Delta Slider
+        var speedDeltaSlider = document.getElementById("speedDeltaSlider");
+        var speedDeltaValue = document.getElementById("speedDeltaValue");
+
+        speedDeltaSlider.addEventListener("input", function() {
+            speedDelta = parseFloat(speedDeltaSlider.value);
+            speedDeltaValue.textContent = speedDelta.toFixed(1);
+        });
+
+        // Variables to track if players have pressed Enter
+        var player1Entered = false;
+        var player2Entered = false;
+
+        // Event listeners for Enter key on name inputs
+        player1NameInput.addEventListener("keydown", function(e) {
+            if (e.keyCode === 13) { // Enter key
+                player1Name = player1NameInput.value.trim();
+                player1Entered = true;
+                checkNamesEntered();
+            }
+        });
+
+        player2NameInput.addEventListener("keydown", function(e) {
+            if (e.keyCode === 13) { // Enter key
+                player2Name = player2NameInput.value.trim();
+                player2Entered = true;
+                checkNamesEntered();
+            }
+        });
+
+        function checkNamesEntered() {
+            if (player1Entered && player2Entered) {
+                if (player1Name !== "" && player2Name !== "") {
+                    // Disable the input fields
+                    player1NameInput.disabled = true;
+                    player2NameInput.disabled = true;
+
+                    // Remove focus from the input fields
+                    player1NameInput.blur();
+                    player2NameInput.blur();
+
+                    startMessage.textContent = ""; // Remove start message
+
+                    // Start countdown
+                    startCountdown();
+                } else {
+                    // Reset entered flags
+                    player1Entered = false;
+                    player2Entered = false;
+                    startMessage.textContent = "Please enter both names.";
+                }
+            }
+        }
+
+        function startCountdown() {
+            countdown = 3;
+            countdownMessage.textContent = countdown;
+            var countdownInterval = setInterval(function() {
+                countdown--;
+                if (countdown > 0) {
+                    countdownMessage.textContent = countdown;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownMessage.textContent = "";
+                    isGameStarted = true;
+                }
+            }, 1000);
+        }
+
+        // Pause Button Functionality
+        pauseButton.addEventListener("click", function() {
+            if (isGameStarted && !isGameOver) {
+                isPaused = !isPaused;
+                pauseButton.textContent = isPaused ? "Resume" : "Pause";
+                countdownMessage.textContent = isPaused ? "Paused" : "";
+            }
+        });
+
+        // Restart Button Functionality
+        restartButton.addEventListener("click", function() {
+            resetGame();
+        });
+
+        function resetGame() {
+            // Reset scores and total points
+            score1 = 0;
+            score2 = 0;
+            totalPoints = 0;
+
+            // Reset ball position and speed
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = 5; // Reset to increased speed
+            ball.dx = 5 * (Math.random() > 0.5 ? 1 : -1); // Adjusted to match new speed
+            ball.dy = 5 * (Math.random() > 0.5 ? 1 : -1); // Adjusted to match new speed
+            ball.color = "#808080"; // Grey color at start
+
+            // Reset paddles
+            paddle1.y = canvas.height / 2 - paddleHeight / 2;
+            paddle2.y = canvas.height / 2 - paddleHeight / 2;
+            paddle1.speed = 5;
+            paddle2.speed = 5;
+
+            // Reset game state
+            isPaused = false;
+            isGameOver = false;
+            isGameStarted = false;
+            countdown = 3;
+            countdownMessage.textContent = "";
+
+            // Reset pause button text
+            pauseButton.textContent = "Pause";
+
+            // Reset messages
+            winnerMessage.textContent = "";
+            startMessage.textContent = "Please enter both player names and press Enter.";
+
+            // Enable and clear name inputs
+            player1NameInput.disabled = false;
+            player2NameInput.disabled = false;
+            player1NameInput.value = "";
+            player2NameInput.value = "";
+            player1Name = "";
+            player2Name = "";
+            player1Entered = false;
+            player2Entered = false;
+        }
+
+        // Game loop functions
+        function movePaddles() {
+            // Player 1 controls (W and S keys)
+            if (keys[87]) { // W key
+                paddle1.dy = -paddle1.speed;
+            } else if (keys[83]) { // S key
+                paddle1.dy = paddle1.speed;
+            } else {
+                paddle1.dy = 0;
+            }
+
+            // Player 2 controls (Up and Down arrow keys)
+            if (keys[38]) { // Up arrow
+                paddle2.dy = -paddle2.speed;
+            } else if (keys[40]) { // Down arrow
+                paddle2.dy = paddle2.speed;
+            } else {
+                paddle2.dy = 0;
+            }
+
+            // Move paddles
+            paddle1.y += paddle1.dy;
+            paddle2.y += paddle2.dy;
+
+            // Prevent paddles from going out of bounds
+            paddle1.y = Math.max(Math.min(paddle1.y, canvas.height - paddle1.height), 0);
+            paddle2.y = Math.max(Math.min(paddle2.y, canvas.height - paddle2.height), 0);
+        }
+
+        function moveBall() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall collision (top and bottom)
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.dy = -ball.dy;
+            } else if (ball.y + ball.radius > canvas.height) {
+                ball.y = canvas.height - ball.radius;
+                ball.dy = -ball.dy;
+            }
+
+            // Paddle collision
+            // Paddle 1
+            if (ball.x - ball.radius < paddle1.x + paddle1.width &&
+                ball.y > paddle1.y &&
+                ball.y < paddle1.y + paddle1.height) {
+
+                // Calculate where the ball hit the paddle
+                var collidePoint = ball.y - (paddle1.y + paddle1.height / 2);
+
+                // Normalize the value of collidePoint (-1 to 1)
+                collidePoint = collidePoint / (paddle1.height / 2);
+
+                // Calculate angle in radians (max 45 degrees)
+                var angleRad = collidePoint * (Math.PI / 4);
+
+                // Direction of the ball after hitting
+                var direction = 1;
+
+                // Change the ball's speed and direction
+                var speed = ball.speed;
+                ball.dx = direction * speed * Math.cos(angleRad);
+                ball.dy = speed * Math.sin(angleRad);
+
+                ball.color = "#353535"; // Dark gray when hit
+            }
+
+            // Paddle 2
+            if (ball.x + ball.radius > paddle2.x &&
+                ball.y > paddle2.y &&
+                ball.y < paddle2.y + paddle2.height) {
+
+                var collidePoint = ball.y - (paddle2.y + paddle2.height / 2);
+                collidePoint = collidePoint / (paddle2.height / 2);
+                var angleRad = collidePoint * (Math.PI / 4);
+                var direction = -1;
+                var speed = ball.speed;
+                ball.dx = direction * speed * Math.cos(angleRad);
+                ball.dy = speed * Math.sin(angleRad);
+
+                ball.color = "#353535"; // Dark gray when hit
+            }
+
+            // Scoring
+            if (ball.x - ball.radius < 0) {
+                score2++;
+                totalPoints++;
+                ball.color = "#303030"; // Darkest gray when missed
+                resetBall();
+            } else if (ball.x + ball.radius > canvas.width) {
+                score1++;
+                totalPoints++;
+                ball.color = "#303030"; // Darkest gray when missed
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            // Check for game over
+            if (score1 >= 20 || score2 >= 20) {
+                isGameOver = true;
+                displayWinner();
+                return;
+            }
+
+            isPaused = true;
+            countdownMessage.textContent = "Resetting...";
+            setTimeout(function() {
+                isPaused = false;
+                ball.x = canvas.width / 2;
+                ball.y = canvas.height / 2;
+                // Reverse direction
+                ball.dx = -ball.dx / Math.abs(ball.dx) * ball.speed * Math.cos(Math.PI / 4);
+                ball.dy = ball.speed * Math.sin(Math.PI / 4) * (Math.random() > 0.5 ? 1 : -1);
+                ball.color = "#808080"; // Reset to grey color
+
+                // Check if speed needs to increase
+                if (totalPoints % 5 === 0) {
+                    increaseSpeed();
+                }
+
+                countdownMessage.textContent = "";
+            }, 2000); // 2-second buffer for resetting
+        }
+
+        function increaseSpeed() {
+            var delta = speedDelta;
+
+            // Increase ball speed
+            ball.speed += delta;
+            // Adjust ball direction speeds accordingly
+            var speed = ball.speed;
+            var angleRad = Math.atan2(ball.dy, ball.dx);
+            ball.dx = (ball.dx / Math.abs(ball.dx)) * speed * Math.cos(angleRad);
+            ball.dy = speed * Math.sin(angleRad);
+
+            // Increase paddle speeds
+            paddle1.speed += delta;
+            paddle2.speed += delta;
+        }
+
+        function drawPaddles() {
+            ctx.fillStyle = "#e5e5e5";
+            drawNeomorphicRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height);
+            drawNeomorphicRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height);
+        }
+
+        function drawBall() {
+            drawNeomorphicCircle(ball.x, ball.y, ball.radius, ball.color);
+        }
+
+        function drawNet() {
+            ctx.beginPath();
+            ctx.setLineDash([10, 10]); // Dotted line
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = "#333333";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+        }
+
+        function drawScores() {
+            ctx.font = "32px 'Times New Roman', Times, serif";
+            ctx.fillStyle = "#333333";
+            ctx.textAlign = "center";
+            ctx.fillText(score1, canvas.width / 4, 50);
+            ctx.fillText(score2, 3 * canvas.width / 4, 50);
+
+            // Draw player names
+            ctx.font = "24px 'Times New Roman', Times, serif";
+            ctx.fillText(player1Name || "Player 1", canvas.width / 4, 80);
+            ctx.fillText(player2Name || "Player 2", 3 * canvas.width / 4, 80);
+        }
+
+        function drawNeomorphicRect(x, y, width, height) {
+            // Draw rectangle with neomorphic effect
+            var radius = 15;
+            ctx.fillStyle = "#e5e5e5";
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner shadows for neomorphic effect
+            ctx.shadowColor = "#ffffff";
+            ctx.shadowOffsetX = -7;
+            ctx.shadowOffsetY = -7;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+
+            ctx.shadowColor = "#c1c1c1";
+            ctx.shadowOffsetX = 7;
+            ctx.shadowOffsetY = 7;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+
+            // Reset shadow
+            ctx.shadowColor = "transparent";
+        }
+
+        function drawNeomorphicCircle(x, y, radius, color) {
+            // Draw circle with neomorphic effect
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Inner shadows for neomorphic effect
+            ctx.shadowColor = "#ffffff";
+            ctx.shadowOffsetX = -7;
+            ctx.shadowOffsetY = -7;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+
+            ctx.shadowColor = "#c1c1c1";
+            ctx.shadowOffsetX = 7;
+            ctx.shadowOffsetY = 7;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+
+            // Reset shadow
+            ctx.shadowColor = "transparent";
+        }
+
+        function displayWinner() {
+            winnerMessage.textContent = "";
+
+            if (score1 >= 20) {
+                winnerMessage.textContent = player1Name + " Wins!";
+            } else if (score2 >= 20) {
+                winnerMessage.textContent = player2Name + " Wins!";
+            }
+        }
+
+        function draw() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw game elements
+            drawNet();
+            drawPaddles();
+            drawBall();
+            drawScores();
+        }
+
+        function update() {
+            if (!isPaused && !isGameOver && isGameStarted) {
+                movePaddles();
+                moveBall();
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
