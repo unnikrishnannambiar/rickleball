@@ -4,8 +4,6 @@ Certainly! Below is a comprehensive `README.md` file for the **Rickle Ball** gam
 
 # Rickle Ball
 
-![Rickle Ball Banner](https://via.placeholder.com/800x200?text=Rickle+Ball+Banner)
-
 **Rickle Ball** is a modern, web-based two-player paddle game inspired by the classic Pong. Designed with a sleek neomorphic aesthetic, it offers an engaging and visually appealing gaming experience. Players compete to score points by hitting a ball past their opponent's paddle, with increasing difficulty as the game progresses.
 
 ## Table of Contents
@@ -37,17 +35,17 @@ Certainly! Below is a comprehensive `README.md` file for the **Rickle Ball** gam
 
 ![Gameplay Screenshot](https://via.placeholder.com/800x600?text=Gameplay+Screenshot)
 
-Experience **Rickle Ball** directly in your browser! [Click here to play now](#) *(Note: Replace `#` with the actual link if hosted online.)*
+Experience **Rickle Ball** directly in your browser! [Click here to play now](https://unnikrishnannambiar.github.io/rickleball/) 
 
 ## Installation
 
 To play **Rickle Ball**, follow these simple steps:
 
 1. **Download the Game Files:**
-   - Clone the repository or download the ZIP file from [GitHub Repository Link](#). *(Note: Replace `#` with the actual repository link.)*
+   - Clone the repository or download the ZIP file from [GitHub Repository Link](https://github.com/unnikrishnannambiar/rickleball).
    - If cloning via Git:
      ```bash
-     git clone https://github.com/yourusername/rickle-ball.git
+     git clone https://github.com/yourusername/rickleball.git
      ```
    
 2. **Navigate to the Game Directory:**
